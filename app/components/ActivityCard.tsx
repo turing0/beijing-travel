@@ -1,0 +1,223 @@
+"use client";
+
+import { useState } from "react";
+import {
+  type Activity,
+  type Category,
+  CATEGORY_META,
+  CATEGORY_ORDER,
+} from "../lib/types";
+
+interface Props {
+  activity: Activity;
+  isFirst: boolean;
+  isLast: boolean;
+  onChange: (a: Activity) => void;
+  onDelete: () => void;
+  onMove: (dir: -1 | 1) => void;
+}
+
+export default function ActivityCard({
+  activity,
+  isFirst,
+  isLast,
+  onChange,
+  onDelete,
+  onMove,
+}: Props) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Activity>(activity);
+  const meta = CATEGORY_META[activity.category];
+
+  function startEdit() {
+    setDraft(activity);
+    setEditing(true);
+  }
+
+  function save() {
+    onChange({ ...draft, title: draft.title.trim() || "未命名" });
+    setEditing(false);
+  }
+
+  if (editing) {
+    const set = (patch: Partial<Activity>) =>
+      setDraft((d) => ({ ...d, ...patch }));
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm">
+        <div className="flex gap-2">
+          <label className="flex-1 text-xs font-medium text-stone-500">
+            开始
+            <input
+              type="time"
+              value={draft.start}
+              onChange={(e) => set({ start: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm text-stone-800"
+            />
+          </label>
+          <label className="flex-1 text-xs font-medium text-stone-500">
+            结束（可选）
+            <input
+              type="time"
+              value={draft.end ?? ""}
+              onChange={(e) => set({ end: e.target.value || undefined })}
+              className="mt-1 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm text-stone-800"
+            />
+          </label>
+        </div>
+
+        <label className="mt-3 block text-xs font-medium text-stone-500">
+          活动
+          <input
+            value={draft.title}
+            onChange={(e) => set({ title: e.target.value })}
+            placeholder="想做点什么…"
+            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
+          />
+        </label>
+
+        <label className="mt-3 block text-xs font-medium text-stone-500">
+          类型
+          <select
+            value={draft.category}
+            onChange={(e) => set({ category: e.target.value as Category })}
+            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
+          >
+            {CATEGORY_ORDER.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_META[c].emoji} {CATEGORY_META[c].label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="mt-3 block text-xs font-medium text-stone-500">
+          地点（可选）
+          <input
+            value={draft.location ?? ""}
+            onChange={(e) => set({ location: e.target.value || undefined })}
+            placeholder="在哪儿见 / 哪家店"
+            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
+          />
+        </label>
+
+        <label className="mt-3 block text-xs font-medium text-stone-500">
+          备注（可选）
+          <textarea
+            value={draft.notes ?? ""}
+            onChange={(e) => set({ notes: e.target.value || undefined })}
+            placeholder="留言、想法、要提前订的东西…"
+            rows={2}
+            className="mt-1 w-full resize-y rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
+          />
+        </label>
+
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            onClick={onDelete}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            删除
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100"
+            >
+              取消
+            </button>
+            <button
+              onClick={save}
+              className="rounded-lg bg-rose-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-rose-600"
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`group rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
+        activity.agreed ? "border-emerald-300" : meta.ring
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 text-right">
+          <div className="font-mono text-sm font-bold text-stone-800">
+            {activity.start}
+          </div>
+          {activity.end && (
+            <div className="font-mono text-xs text-stone-400">
+              {activity.end}
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${meta.chip}`}
+            >
+              {meta.emoji} {meta.label}
+            </span>
+            {activity.agreed && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                ✓ 都同意了
+              </span>
+            )}
+          </div>
+          <h3 className="mt-1.5 font-semibold text-stone-800">
+            {activity.title}
+          </h3>
+          {activity.location && (
+            <p className="mt-0.5 text-sm text-stone-500">
+              📍 {activity.location}
+            </p>
+          )}
+          {activity.notes && (
+            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-stone-600">
+              {activity.notes}
+            </p>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-1">
+            <button
+              onClick={() => onChange({ ...activity, agreed: !activity.agreed })}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                activity.agreed
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                  : "text-stone-500 hover:bg-stone-100"
+              }`}
+            >
+              {activity.agreed ? "✓ 已确认" : "标记两人都同意"}
+            </button>
+            <button
+              onClick={startEdit}
+              className="rounded-lg px-2.5 py-1 text-xs font-medium text-stone-500 hover:bg-stone-100"
+            >
+              编辑
+            </button>
+            <button
+              onClick={() => onMove(-1)}
+              disabled={isFirst}
+              className="rounded-lg px-2 py-1 text-xs text-stone-400 hover:bg-stone-100 disabled:opacity-30"
+              aria-label="上移"
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => onMove(1)}
+              disabled={isLast}
+              className="rounded-lg px-2 py-1 text-xs text-stone-400 hover:bg-stone-100 disabled:opacity-30"
+              aria-label="下移"
+            >
+              ↓
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

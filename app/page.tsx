@@ -19,6 +19,26 @@ function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
 
+function newRoomCode(): string {
+  return "r" + Math.random().toString(36).slice(2, 8);
+}
+
+// 从“邀请链接”或“房间号”里解析出房间号
+function parseRoom(input: string): string | null {
+  const s = input.trim();
+  if (!s) return null;
+  try {
+    const q = new URL(s).searchParams.get("room");
+    if (q) return q;
+  } catch {
+    /* 不是完整链接，继续往下判断 */
+  }
+  const m = s.match(/room=([A-Za-z0-9_-]+)/);
+  if (m) return m[1];
+  if (/^[A-Za-z0-9_-]+$/.test(s)) return s;
+  return null;
+}
+
 interface ApiResp {
   ok: boolean;
   doc: { plan: Plan; rev: number; updatedAt: string } | null;
@@ -30,6 +50,8 @@ export default function Home() {
   const [sync, setSync] = useState<SyncState>("loading");
   const [toast, setToast] = useState("");
   const [editingHeader, setEditingHeader] = useState(false);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [joinInput, setJoinInput] = useState("");
 
   const room = useRef("default");
   const revRef = useRef(0); // 最近一次已知的服务器版本
@@ -91,38 +113,22 @@ export default function Home() {
     [scheduleSave],
   );
 
-  // 初始化：确定房间号 → 拉取服务器上的行程（没有就用默认并建一份）
-  useEffect(() => {
-    setMounted(true);
-    const url = new URL(window.location.href);
-    let r = url.searchParams.get("room");
-    if (!r) {
-      r = "r" + Math.random().toString(36).slice(2, 8);
-      url.searchParams.set("room", r);
-      window.history.replaceState(null, "", url.toString());
-    }
-    room.current = r;
-
-    (async () => {
+  // 拉取某个房间的行程；房间还没数据就用默认行程建一份
+  const loadRoom = useCallback(
+    async (r: string) => {
+      setSync("loading");
       try {
         const res = await fetch(`/api/plan?room=${r}`, { cache: "no-store" });
         const data = (await res.json()) as ApiResp;
         if (data.ok && data.doc) {
           setPlan(data.doc.plan);
+          planRef.current = data.doc.plan;
           revRef.current = data.doc.rev;
           savedSeq.current = editSeq.current;
           setSync("synced");
         } else {
-          // 房间还没数据：用本地缓存或默认行程初始化一份
-          let seed = DEFAULT_PLAN;
-          try {
-            const c = localStorage.getItem(CACHE_KEY);
-            if (c) seed = JSON.parse(c) as Plan;
-          } catch {
-            /* 忽略 */
-          }
-          setPlan(seed);
-          planRef.current = seed;
+          setPlan(DEFAULT_PLAN);
+          planRef.current = DEFAULT_PLAN;
           await doSave();
         }
       } catch {
@@ -130,17 +136,41 @@ export default function Home() {
           const c = localStorage.getItem(CACHE_KEY);
           if (c) setPlan(JSON.parse(c) as Plan);
         } catch {
-          /* 忽略 */
+          /* 忽略损坏的缓存 */
         }
         setSync("offline");
       }
-    })();
-  }, [doSave]);
+    },
+    [doSave],
+  );
+
+  // 进入某个房间：写进网址（方便分享 / 刷新还在），并开始加载
+  const enterRoom = useCallback((r: string) => {
+    room.current = r;
+    const url = new URL(window.location.href);
+    url.searchParams.set("room", r);
+    window.history.replaceState(null, "", url.toString());
+    setRoomId(r);
+  }, []);
+
+  // 打开页面：网址里带 room 就直接进；没带就停在首页让用户选——不再自动新建房间。
+  useEffect(() => {
+    setMounted(true);
+    const r = new URL(window.location.href).searchParams.get("room");
+    if (r) {
+      room.current = r;
+      setRoomId(r);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (roomId) loadRoom(roomId);
+  }, [roomId, loadRoom]);
 
   // 自适应轮询：活跃时 5 秒、空闲时 20 秒；切到后台完全暂停，回到前台立刻拉一次。
   // 本地有未保存改动 / 正在输入时先不覆盖，别打断正在改的人。
   useEffect(() => {
-    if (!mounted) return;
+    if (!roomId) return;
     let stopped = false;
 
     const poll = async () => {
@@ -210,7 +240,7 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onVisibility);
     };
-  }, [mounted, flash]);
+  }, [roomId, flash]);
 
   const daysLeft = useMemo(() => {
     const now = new Date();
@@ -290,6 +320,87 @@ export default function Home() {
     updated: "bg-sky-100 text-sky-700",
     offline: "bg-red-100 text-red-700",
   };
+
+  function tryJoin() {
+    const r = parseRoom(joinInput);
+    if (!r) {
+      flash("没认出来，贴邀请链接或填房间号");
+      return;
+    }
+    enterRoom(r);
+  }
+
+  // 首屏：网址没带 room 时，让用户选「新建」还是「进入已有」，不自动建房间
+  if (!mounted || !roomId) {
+    return (
+      <main className="flex min-h-full items-center justify-center bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50 px-4 py-12">
+        {!mounted ? (
+          <p className="text-sm text-stone-400">加载中…</p>
+        ) : (
+          <div className="w-full max-w-md">
+            <div className="text-center">
+              <span className="rounded-full bg-rose-500 px-3 py-1 text-sm font-medium text-white">
+                北京 · 三天两晚
+              </span>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-stone-800">
+                我们的北京三日行程
+              </h1>
+              <p className="mt-2 text-sm text-stone-500">
+                5月29日 周五 — 5月31日 周日 · 两个人一起安排，实时同步
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-4">
+              <button
+                onClick={() => enterRoom(newRoomCode())}
+                className="w-full rounded-2xl bg-rose-500 px-5 py-4 text-left shadow-sm transition hover:bg-rose-600"
+              >
+                <div className="text-base font-semibold text-white">
+                  ✨ 新建一个行程
+                </div>
+                <div className="mt-0.5 text-sm text-rose-100">
+                  从默认的三天安排开始，建好后把链接发给她
+                </div>
+              </button>
+
+              <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                <div className="text-base font-semibold text-stone-800">
+                  🔗 进入已有行程
+                </div>
+                <div className="mt-0.5 text-sm text-stone-500">
+                  把对方发来的邀请链接或房间号贴在这里
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={joinInput}
+                    onChange={(e) => setJoinInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && tryJoin()}
+                    placeholder="邀请链接 或 房间号"
+                    className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
+                  />
+                  <button
+                    onClick={tryJoin}
+                    className="shrink-0 rounded-lg bg-stone-800 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-900"
+                  >
+                    进入
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-6 text-center text-xs text-stone-400">
+              进入后网址会带上房间号，刷新、换设备只要打开同一个链接就行
+            </p>
+          </div>
+        )}
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-stone-800 px-5 py-2.5 text-sm font-medium text-white shadow-lg">
+            {toast}
+          </div>
+        )}
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-full bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50">

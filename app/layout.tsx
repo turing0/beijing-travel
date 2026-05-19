@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "北京三日 · 我们的行程",
   description: "5月29日—31日，一起在北京安排的三天行程，可以随时一起编辑。",
+};
+
+// iOS Safari 顶部状态栏/地址栏与页面渐变背景同色，移动端观感更连贯
+export const viewport: Viewport = {
+  themeColor: "#fff1f2",
 };
 
 export default function RootLayout({

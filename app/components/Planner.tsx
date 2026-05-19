@@ -107,7 +107,7 @@ function DayColumn({
       </div>
       <div
         ref={setNodeRef}
-        className={`flex min-h-24 flex-col gap-3 rounded-2xl transition-colors ${
+        className={`flex min-h-24 flex-col gap-4 rounded-2xl transition-colors ${
           isOver ? "bg-rose-100/50" : ""
         }`}
       >
@@ -218,7 +218,7 @@ export default function Planner({
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-10 grid gap-8 lg:grid-cols-3 lg:gap-6">
         {localDays.map((day) => (
           <DayColumn key={day.id} day={day}>
             <SortableContext

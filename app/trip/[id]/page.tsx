@@ -189,9 +189,9 @@ export default function TripPage() {
 
   return (
     <main className="min-h-full bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6 sm:py-12">
         <header className="text-center">
-          <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-sm">
+          <div className="mb-5 flex flex-wrap items-center justify-center gap-2 text-sm">
             <span className="rounded-full bg-rose-500 px-3 py-1 font-medium text-white">
               共 {plan.days.length} 天
               {plan.days.length > 1 ? ` ${plan.days.length - 1} 晚` : ""}
@@ -269,7 +269,7 @@ export default function TripPage() {
           )}
         </header>
 
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
           <button
             onClick={() =>
               copy(
@@ -314,11 +314,11 @@ export default function TripPage() {
           onActivityMove={moveActivity}
         />
 
-        <p className="mt-4 text-center text-xs text-stone-400">
+        <p className="mt-6 text-center text-xs leading-relaxed text-stone-400">
           提示：按住卡片左边的时间（⠿）就能拖动，可在同一天内排序，也能拖到别的天
         </p>
 
-        <footer className="mt-12 text-center text-xs text-stone-400">
+        <footer className="mt-14 text-center text-xs text-stone-400">
           祝你们玩得开心 · 行程随时一起改
         </footer>
       </div>

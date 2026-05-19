@@ -30,11 +30,11 @@ export default function Checklist({
         )}
       </div>
 
-      <ul className="mt-4 flex flex-col gap-2">
+      <ul className="mt-4 flex flex-col gap-2.5">
         {items.map((item) => (
           <li
             key={item.id}
-            className="group flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-stone-50"
+            className="group flex items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-stone-50"
           >
             <button
               onClick={() => onToggle(item.id)}

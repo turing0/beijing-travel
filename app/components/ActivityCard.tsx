@@ -208,10 +208,10 @@ export default function ActivityCard({
             </p>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-1">
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => onChange({ ...activity, agreed: !activity.agreed })}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
                 activity.agreed
                   ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                   : "text-stone-500 hover:bg-stone-100"
@@ -221,14 +221,14 @@ export default function ActivityCard({
             </button>
             <button
               onClick={startEdit}
-              className="rounded-lg px-2.5 py-1 text-xs font-medium text-stone-500 hover:bg-stone-100"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-500 hover:bg-stone-100"
             >
               编辑
             </button>
             <button
               onClick={() => onMove(-1)}
               disabled={isFirst}
-              className="rounded-lg px-2 py-1 text-xs text-stone-400 hover:bg-stone-100 disabled:opacity-30"
+              className="rounded-lg px-2.5 py-1.5 text-xs text-stone-400 hover:bg-stone-100 disabled:opacity-30"
               aria-label="上移"
             >
               ↑
@@ -236,7 +236,7 @@ export default function ActivityCard({
             <button
               onClick={() => onMove(1)}
               disabled={isLast}
-              className="rounded-lg px-2 py-1 text-xs text-stone-400 hover:bg-stone-100 disabled:opacity-30"
+              className="rounded-lg px-2.5 py-1.5 text-xs text-stone-400 hover:bg-stone-100 disabled:opacity-30"
               aria-label="下移"
             >
               ↓

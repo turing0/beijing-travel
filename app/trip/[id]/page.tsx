@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import Checklist from "../../components/Checklist";
 import LoadingScreen from "../../components/LoadingScreen";
 import Planner from "../../components/Planner";
 import { DEFAULT_PLAN } from "../../lib/defaultPlan";
@@ -92,6 +93,39 @@ export default function TripPage() {
   const reorderDays = (newDays: Day[]) =>
     commit((p) => ({ ...p, days: newDays }));
 
+  const newId = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `c-${Date.now()}`;
+
+  const addChecklistItem = () =>
+    commit((p) => ({
+      ...p,
+      checklist: [...p.checklist, { id: newId(), text: "", done: false }],
+    }));
+
+  const toggleChecklistItem = (cid: string) =>
+    commit((p) => ({
+      ...p,
+      checklist: p.checklist.map((c) =>
+        c.id === cid ? { ...c, done: !c.done } : c,
+      ),
+    }));
+
+  const changeChecklistText = (cid: string, text: string) =>
+    commit((p) => ({
+      ...p,
+      checklist: p.checklist.map((c) =>
+        c.id === cid ? { ...c, text } : c,
+      ),
+    }));
+
+  const deleteChecklistItem = (cid: string) =>
+    commit((p) => ({
+      ...p,
+      checklist: p.checklist.filter((c) => c.id !== cid),
+    }));
+
   async function copy(text: string, okMsg: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -146,6 +180,7 @@ export default function TripPage() {
     .flatMap((d) => d.items)
     .filter((i) => i.agreed).length;
   const totalItems = plan.days.flatMap((d) => d.items).length;
+  const isEmpty = totalItems === 0 && plan.checklist.length === 0;
 
   return (
     <main className="min-h-full bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50">
@@ -238,13 +273,23 @@ export default function TripPage() {
           >
             📋 复制成文字
           </button>
-          <button
-            onClick={resetPlan}
-            className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-stone-500 shadow-sm hover:bg-stone-50"
-          >
-            ↺ 载入北京示例
-          </button>
+          {isEmpty && (
+            <button
+              onClick={resetPlan}
+              className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-stone-500 shadow-sm hover:bg-stone-50"
+            >
+              ↺ 载入北京示例
+            </button>
+          )}
         </div>
+
+        <Checklist
+          items={plan.checklist}
+          onAdd={addChecklistItem}
+          onToggle={toggleChecklistItem}
+          onChangeText={changeChecklistText}
+          onDelete={deleteChecklistItem}
+        />
 
         <Planner
           days={plan.days}

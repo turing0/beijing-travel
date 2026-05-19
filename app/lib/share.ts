@@ -25,6 +25,13 @@ export function decodePlan(s: string): Plan | null {
 
 export function planToText(plan: Plan): string {
   const lines: string[] = [plan.title, plan.subtitle, ""];
+  if (plan.checklist?.length) {
+    lines.push("📝 注意事项 / 备忘");
+    for (const c of plan.checklist) {
+      lines.push(`  ${c.done ? "[✓]" : "[ ]"} ${c.text}`);
+    }
+    lines.push("");
+  }
   for (const day of plan.days) {
     lines.push(`【${day.label} ${day.weekday}】`);
     for (const it of day.items) {

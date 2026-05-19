@@ -7,6 +7,12 @@ const id = () => `seed-${n++}`;
 export const DEFAULT_PLAN: Plan = {
   title: "北京三日 · 我们的行程",
   subtitle: "5月29日 周五 — 5月31日 周日 · 一起把每一格填满吧",
+  checklist: [
+    { id: id(), text: "身份证 / 证件", done: false },
+    { id: id(), text: "充电宝、充电线", done: false },
+    { id: id(), text: "5月31日 21:25 的返程航班", done: false },
+    { id: id(), text: "故宫等热门景点提前预约", done: false },
+  ],
   days: [
     {
       id: "day-1",

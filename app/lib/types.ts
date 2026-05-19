@@ -16,8 +16,15 @@ export interface Day {
   items: Activity[];
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface Plan {
   title: string;
   subtitle: string;
+  checklist: ChecklistItem[];
   days: Day[];
 }

@@ -22,6 +22,11 @@ interface ApiResp {
   doc: { plan: Plan; rev: number; updatedAt: string } | null;
 }
 
+// 老数据可能没有 checklist 字段，补齐避免读取时报错
+function normalizePlan(p: Plan): Plan {
+  return Array.isArray(p?.checklist) ? p : { ...p, checklist: [] };
+}
+
 // 新建行程时把生成的行程暂存在这里，跳到 /trip/<id> 后由这里取出来当初始数据
 export const seedKey = (id: string) => `trip-seed:${id}`;
 
@@ -101,8 +106,9 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
           } catch {
             /* 忽略 */
           }
-          setPlan(data.doc.plan);
-          planRef.current = data.doc.plan;
+          const loaded = normalizePlan(data.doc.plan);
+          setPlan(loaded);
+          planRef.current = loaded;
           revRef.current = data.doc.rev;
           savedSeq.current = editSeq.current;
           setSync("synced");
@@ -121,6 +127,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
             setNotFound(true);
             return;
           }
+          seed = normalizePlan(seed);
           setPlan(seed);
           planRef.current = seed;
           await doSave();
@@ -129,7 +136,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
         if (cancelled) return;
         try {
           const c = localStorage.getItem(CACHE_KEY);
-          if (c) setPlan(JSON.parse(c) as Plan);
+          if (c) setPlan(normalizePlan(JSON.parse(c) as Plan));
         } catch {
           /* 忽略损坏的缓存 */
         }
@@ -167,7 +174,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
             !dirty &&
             !typing
           ) {
-            setPlan(data.doc.plan);
+            setPlan(normalizePlan(data.doc.plan));
             revRef.current = data.doc.rev;
             savedSeq.current = editSeq.current;
             lastActivity.current = Date.now();

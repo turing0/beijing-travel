@@ -44,5 +44,5 @@ export function createPlan(city: string, start: string, end: string): Plan {
       ? `${first.label} ${first.weekday} — ${last.label} ${last.weekday} · 一起把每一格填满吧`
       : `${first.label} ${first.weekday} · 一起把每一格填满吧`;
 
-  return { title, subtitle, days };
+  return { title, subtitle, checklist: [], days };
 }

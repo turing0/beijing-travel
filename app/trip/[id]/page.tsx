@@ -212,7 +212,7 @@ export default function TripPage() {
               className={`inline-block h-2.5 w-2.5 rounded-full sm:hidden ${
                 syncDot[sync]
               } ${
-                sync === "loading" || sync === "saving" ? "animate-pulse" : ""
+                sync === "saving" ? "animate-pulse" : ""
               }`}
             />
             <span

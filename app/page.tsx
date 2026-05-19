@@ -9,7 +9,9 @@ import type { Activity, Day, Plan } from "./lib/types";
 const CACHE_KEY = "beijing-plan-cache-v1";
 const TRIP_START = new Date("2026-05-29T00:00:00");
 const SAVE_DEBOUNCE = 700;
-const POLL_MS = 3000;
+const POLL_FAST = 5000; // 刚有人改动后的一段时间，拉得勤一点
+const POLL_SLOW = 20000; // 没人动时放慢，省请求和电量
+const ACTIVE_WINDOW = 60000; // 最后一次改动后 1 分钟内算“活跃”
 
 type SyncState = "loading" | "synced" | "saving" | "updated" | "offline";
 
@@ -35,6 +37,9 @@ export default function Home() {
   const savedSeq = useRef(0); // 已成功保存到服务器的改动序号
   const planRef = useRef(plan);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivity = useRef(Date.now()); // 最后一次本地/远端改动的时间
+  const polling = useRef(false); // 防止两次轮询请求叠在一起
   planRef.current = plan;
 
   const flash = useCallback((msg: string) => {
@@ -71,6 +76,7 @@ export default function Home() {
   const commit = useCallback(
     (updater: (p: Plan) => Plan) => {
       editSeq.current += 1;
+      lastActivity.current = Date.now();
       setPlan((p) => {
         const next = updater(p);
         try {
@@ -131,10 +137,15 @@ export default function Home() {
     })();
   }, [doSave]);
 
-  // 轮询：每 3 秒看看对方有没有改；本地有未保存改动 / 正在输入时先不覆盖
+  // 自适应轮询：活跃时 5 秒、空闲时 20 秒；切到后台完全暂停，回到前台立刻拉一次。
+  // 本地有未保存改动 / 正在输入时先不覆盖，别打断正在改的人。
   useEffect(() => {
     if (!mounted) return;
-    const tick = async () => {
+    let stopped = false;
+
+    const poll = async () => {
+      if (polling.current) return;
+      polling.current = true;
       const dirty = editSeq.current !== savedSeq.current;
       const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(
         document.activeElement?.tagName ?? "",
@@ -144,23 +155,61 @@ export default function Home() {
           cache: "no-store",
         });
         const data = (await res.json()) as ApiResp;
-        if (!data.ok) return;
-        setSync((s) => (s === "offline" ? "synced" : s));
-        if (data.doc && data.doc.rev !== revRef.current) {
-          if (dirty || typing) return; // 别打断正在改的人
-          setPlan(data.doc.plan);
-          revRef.current = data.doc.rev;
-          savedSeq.current = editSeq.current;
-          setSync("updated");
-          flash("已同步对方的修改 ✨");
-          window.setTimeout(() => setSync("synced"), 1500);
+        if (data.ok) {
+          setSync((s) => (s === "offline" ? "synced" : s));
+          if (
+            data.doc &&
+            data.doc.rev !== revRef.current &&
+            !dirty &&
+            !typing
+          ) {
+            setPlan(data.doc.plan);
+            revRef.current = data.doc.rev;
+            savedSeq.current = editSeq.current;
+            lastActivity.current = Date.now(); // 对方在动，保持快节奏
+            setSync("updated");
+            flash("已同步对方的修改 ✨");
+            window.setTimeout(() => setSync("synced"), 1500);
+          }
         }
       } catch {
         setSync("offline");
+      } finally {
+        polling.current = false;
       }
     };
-    const t = setInterval(tick, POLL_MS);
-    return () => clearInterval(t);
+
+    const schedule = () => {
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+      if (stopped || document.hidden) return; // 后台时不安排下一次
+      const active = Date.now() - lastActivity.current < ACTIVE_WINDOW;
+      pollTimer.current = setTimeout(
+        async () => {
+          await poll();
+          schedule();
+        },
+        active ? POLL_FAST : POLL_SLOW,
+      );
+    };
+
+    const onVisibility = async () => {
+      if (document.hidden) {
+        if (pollTimer.current) clearTimeout(pollTimer.current);
+      } else {
+        await poll(); // 回到前台立刻拉最新的
+        schedule();
+      }
+    };
+
+    schedule();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onVisibility);
+    return () => {
+      stopped = true;
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onVisibility);
+    };
   }, [mounted, flash]);
 
   const daysLeft = useMemo(() => {

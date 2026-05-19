@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ActivityCard from "./components/ActivityCard";
 import LoadingScreen from "./components/LoadingScreen";
+import Planner from "./components/Planner";
 import { DEFAULT_PLAN } from "./lib/defaultPlan";
 import { planToText } from "./lib/share";
 import type { Activity, Day, Plan } from "./lib/types";
@@ -294,6 +294,9 @@ export default function Home() {
       },
     ]);
 
+  const reorderDays = (newDays: Day[]) =>
+    commit((p) => ({ ...p, days: newDays }));
+
   async function copy(text: string, okMsg: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -544,45 +547,18 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          {plan.days.map((day: Day) => (
-            <section key={day.id} className="flex flex-col">
-              <div className="sticky top-0 z-10 mb-3 rounded-2xl bg-white/80 px-4 py-3 backdrop-blur">
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-lg font-bold text-stone-800">
-                    {day.label}
-                    <span className="ml-2 text-sm font-normal text-stone-500">
-                      {day.weekday}
-                    </span>
-                  </h2>
-                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-600">
-                    {day.tag}
-                  </span>
-                </div>
-              </div>
+        <Planner
+          days={plan.days}
+          onReorder={reorderDays}
+          onActivityChange={updateActivity}
+          onActivityDelete={deleteActivity}
+          onActivityAdd={addActivity}
+          onActivityMove={moveActivity}
+        />
 
-              <div className="flex flex-col gap-3">
-                {day.items.map((it, idx) => (
-                  <ActivityCard
-                    key={it.id}
-                    activity={it}
-                    isFirst={idx === 0}
-                    isLast={idx === day.items.length - 1}
-                    onChange={(a) => updateActivity(day.id, a)}
-                    onDelete={() => deleteActivity(day.id, it.id)}
-                    onMove={(dir) => moveActivity(day.id, idx, dir)}
-                  />
-                ))}
-                <button
-                  onClick={() => addActivity(day.id)}
-                  className="rounded-2xl border-2 border-dashed border-stone-300 py-3 text-sm font-medium text-stone-400 transition hover:border-rose-300 hover:text-rose-500"
-                >
-                  + 加一项
-                </button>
-              </div>
-            </section>
-          ))}
-        </div>
+        <p className="mt-4 text-center text-xs text-stone-400">
+          提示：按住卡片左边的时间（⠿）就能拖动，可在同一天内排序，也能拖到别的天
+        </p>
 
         <footer className="mt-12 text-center text-xs text-stone-400">
           祝你们这三天玩得开心 · 行程随时一起改

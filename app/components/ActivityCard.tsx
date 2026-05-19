@@ -10,6 +10,8 @@ interface Props {
   onChange: (a: Activity) => void;
   onDelete: () => void;
   onMove: (dir: -1 | 1) => void;
+  dragRef?: (el: HTMLElement | null) => void;
+  dragProps?: Record<string, unknown>;
 }
 
 export default function ActivityCard({
@@ -19,6 +21,8 @@ export default function ActivityCard({
   onChange,
   onDelete,
   onMove,
+  dragRef,
+  dragProps,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -168,7 +172,16 @@ export default function ActivityCard({
       )}
 
       <div className="flex items-start gap-3 pr-6">
-        <div className="shrink-0 text-right">
+        <div
+          ref={dragRef}
+          {...dragProps}
+          className={`shrink-0 text-right ${
+            dragProps
+              ? "cursor-grab touch-none select-none active:cursor-grabbing"
+              : ""
+          }`}
+          title={dragProps ? "按住拖动，可跨天移动" : undefined}
+        >
           <div className="font-mono text-sm font-bold text-stone-800">
             {activity.start}
           </div>
@@ -177,14 +190,12 @@ export default function ActivityCard({
               {activity.end}
             </div>
           )}
+          {dragProps && (
+            <div className="mt-1 text-sm leading-none text-stone-300">⠿</div>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
-          {activity.agreed && (
-            <span className="mb-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-              ✓ 都同意了
-            </span>
-          )}
           <h3 className="font-semibold text-stone-800">{activity.title}</h3>
           {activity.location && (
             <p className="mt-0.5 text-sm text-stone-500">

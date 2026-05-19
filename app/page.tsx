@@ -39,6 +39,14 @@ function parseRoom(input: string): string | null {
   return null;
 }
 
+// 自定义房间号：只留字母、数字、- 和 _，最长 40
+function sanitizeRoom(s: string): string {
+  return s
+    .trim()
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 40);
+}
+
 interface ApiResp {
   ok: boolean;
   doc: { plan: Plan; rev: number; updatedAt: string } | null;
@@ -52,6 +60,7 @@ export default function Home() {
   const [editingHeader, setEditingHeader] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [joinInput, setJoinInput] = useState("");
+  const [createInput, setCreateInput] = useState("");
 
   const room = useRef("default");
   const revRef = useRef(0); // 最近一次已知的服务器版本
@@ -330,6 +339,20 @@ export default function Home() {
     enterRoom(r);
   }
 
+  function tryCreate() {
+    const raw = createInput.trim();
+    if (!raw) {
+      enterRoom(newRoomCode()); // 没填就随机一个
+      return;
+    }
+    const r = sanitizeRoom(raw);
+    if (!r) {
+      flash("房间号只能用字母、数字、- 和 _");
+      return;
+    }
+    enterRoom(r);
+  }
+
   // 首屏：网址没带 room 时，让用户选「新建」还是「进入已有」，不自动建房间
   if (!mounted || !roomId) {
     return (
@@ -351,17 +374,33 @@ export default function Home() {
             </div>
 
             <div className="mt-8 space-y-4">
-              <button
-                onClick={() => enterRoom(newRoomCode())}
-                className="w-full rounded-2xl bg-rose-500 px-5 py-4 text-left shadow-sm transition hover:bg-rose-600"
-              >
-                <div className="text-base font-semibold text-white">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-5 shadow-sm">
+                <div className="text-base font-semibold text-stone-800">
                   ✨ 新建一个行程
                 </div>
-                <div className="mt-0.5 text-sm text-rose-100">
-                  从默认的三天安排开始，建好后把链接发给她
+                <div className="mt-0.5 text-sm text-stone-500">
+                  从默认的三天安排开始。可以自己起个房间号（你俩好记的，
+                  比如名字缩写），留空就随机生成。
                 </div>
-              </button>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={createInput}
+                    onChange={(e) => setCreateInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && tryCreate()}
+                    placeholder="自定义房间号（可留空）"
+                    className="min-w-0 flex-1 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-stone-800"
+                  />
+                  <button
+                    onClick={tryCreate}
+                    className="shrink-0 rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600"
+                  >
+                    创建
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-stone-400">
+                  只能用字母、数字、- 和 _。若这个房间号已有行程，会直接打开它。
+                </p>
+              </div>
 
               <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                 <div className="text-base font-semibold text-stone-800">

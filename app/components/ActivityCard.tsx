@@ -26,6 +26,7 @@ export default function ActivityCard({
   onMove,
 }: Props) {
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState<Activity>(activity);
   const meta = CATEGORY_META[activity.category];
 
@@ -139,11 +140,55 @@ export default function ActivityCard({
 
   return (
     <div
-      className={`group rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
+      className={`group relative rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
         activity.agreed ? "border-emerald-300" : meta.ring
       }`}
     >
-      <div className="flex items-start gap-3">
+      <button
+        onClick={() => setConfirming(true)}
+        aria-label="删除这一项"
+        title="删除这一项"
+        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-stone-300 transition hover:bg-red-50 hover:text-red-500"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+
+      {confirming && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/95 px-4 text-center backdrop-blur-sm">
+          <p className="text-sm text-stone-700">
+            删除
+            <span className="font-semibold text-stone-900">
+              「{activity.title}」
+            </span>
+            ？
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConfirming(false)}
+              className="rounded-lg border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-50"
+            >
+              取消
+            </button>
+            <button
+              onClick={onDelete}
+              className="rounded-lg bg-red-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-600"
+            >
+              删除
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-start gap-3 pr-6">
         <div className="shrink-0 text-right">
           <div className="font-mono text-sm font-bold text-stone-800">
             {activity.start}

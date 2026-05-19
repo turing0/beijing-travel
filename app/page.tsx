@@ -513,7 +513,7 @@ export default function Home() {
 
           {mounted && totalItems > 0 && (
             <p className="mt-3 text-xs text-stone-400">
-              已确认 {totalAgreed} / {totalItems} 项 · 你俩改的是同一份，几秒内自动同步
+              已确认 {totalAgreed} / {totalItems} 项
             </p>
           )}
         </header>

@@ -28,6 +28,7 @@ export const seedKey = (id: string) => `trip-seed:${id}`;
 export function usePlanSync(roomId: string, flash: (m: string) => void) {
   const [plan, setPlan] = useState<Plan>(DEFAULT_PLAN);
   const [sync, setSync] = useState<SyncState>("loading");
+  const [notFound, setNotFound] = useState(false);
 
   const room = useRef(roomId);
   room.current = roomId;
@@ -106,13 +107,19 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
           savedSeq.current = editSeq.current;
           setSync("synced");
         } else {
-          let seed: Plan = DEFAULT_PLAN;
+          // 房间没数据：只有「新建」流程暂存了 seed 才创建；
+          // 否则说明这个房间号根本不存在（直接打开了无效链接），提示不存在。
+          let seed: Plan | null = null;
           try {
             const s = sessionStorage.getItem(seedKey(roomId));
             if (s) seed = JSON.parse(s) as Plan;
             sessionStorage.removeItem(seedKey(roomId));
           } catch {
             /* 忽略 */
+          }
+          if (!seed) {
+            setNotFound(true);
+            return;
           }
           setPlan(seed);
           planRef.current = seed;
@@ -137,6 +144,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
   // 自适应轮询：活跃 5s、空闲 20s；后台暂停，回前台立刻拉一次；
   // 本地有未保存改动 / 正在输入时先不覆盖。
   useEffect(() => {
+    if (notFound) return; // 行程不存在就别轮询了
     let stopped = false;
 
     const poll = async () => {
@@ -206,7 +214,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onVisibility);
     };
-  }, [roomId, flash]);
+  }, [roomId, flash, notFound]);
 
-  return { plan, sync, commit };
+  return { plan, sync, commit, notFound };
 }

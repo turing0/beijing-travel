@@ -44,6 +44,7 @@ export default function Home() {
   const [startDate, setStartDate] = useState("2026-05-29");
   const [endDate, setEndDate] = useState("2026-05-31");
   const [redirecting, setRedirecting] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   function flash(msg: string) {
     setToast(msg);
@@ -95,13 +96,28 @@ export default function Home() {
     router.push(`/trip/${code}`);
   }
 
-  function tryJoin() {
+  async function tryJoin() {
     const r = parseRoom(joinInput);
     if (!r) {
       flash("没认出来，贴邀请链接或填房间号");
       return;
     }
-    router.push(`/trip/${encodeURIComponent(r)}`);
+    setJoining(true);
+    try {
+      const res = await fetch(`/api/plan?room=${encodeURIComponent(r)}`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (data?.ok && data.doc) {
+        router.push(`/trip/${encodeURIComponent(r)}`);
+        return;
+      }
+      flash("这个行程还不存在，确认下房间号或邀请链接～");
+    } catch {
+      flash("网络不太好，待会儿再试");
+    } finally {
+      setJoining(false);
+    }
   }
 
   if (redirecting) {
@@ -202,15 +218,16 @@ export default function Home() {
               <input
                 value={joinInput}
                 onChange={(e) => setJoinInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && tryJoin()}
+                onKeyDown={(e) => e.key === "Enter" && !joining && tryJoin()}
                 placeholder="邀请链接 或 房间号"
                 className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
               />
               <button
                 onClick={tryJoin}
-                className="shrink-0 rounded-lg bg-stone-800 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-900"
+                disabled={joining}
+                className="shrink-0 rounded-lg bg-stone-800 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-900 disabled:opacity-50"
               >
-                进入
+                {joining ? "查找中…" : "进入"}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import LoadingScreen from "../../components/LoadingScreen";
 import Planner from "../../components/Planner";
@@ -40,7 +41,7 @@ export default function TripPage() {
     window.setTimeout(() => setToast(""), 2200);
   }, []);
 
-  const { plan, sync, commit } = usePlanSync(roomId, flash);
+  const { plan, sync, commit, notFound } = usePlanSync(roomId, flash);
 
   const daysLeft = useMemo(() => {
     const first = plan.days[0]?.date;
@@ -109,6 +110,32 @@ export default function TripPage() {
       commit(() => clone(DEFAULT_PLAN) as Plan);
       flash("已载入北京示例行程");
     }
+  }
+
+  if (notFound) {
+    return (
+      <main className="flex min-h-full items-center justify-center bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50 px-4 py-12">
+        <div className="w-full max-w-md text-center">
+          <div className="text-5xl">🧭</div>
+          <h1 className="mt-4 text-2xl font-bold text-stone-800">
+            没找到这个行程
+          </h1>
+          <p className="mt-2 text-sm text-stone-500">
+            房间号
+            <span className="mx-1 rounded bg-stone-100 px-1.5 py-0.5 font-mono text-stone-700">
+              {roomId}
+            </span>
+            还不存在。可能是链接打错了，或对方还没创建。
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-block rounded-xl bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-600"
+          >
+            回首页 · 新建或重新输入
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   if (sync === "loading") {

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LoadingScreen from "./components/LoadingScreen";
 import Planner from "./components/Planner";
+import { createPlan } from "./lib/createPlan";
 import { DEFAULT_PLAN } from "./lib/defaultPlan";
 import { planToText } from "./lib/share";
 import type { Activity, Day, Plan } from "./lib/types";
 
 const CACHE_KEY = "beijing-plan-cache-v1";
-const TRIP_START = new Date("2026-05-29T00:00:00");
 const SAVE_DEBOUNCE = 700;
 const POLL_FAST = 5000; // 刚有人改动后的一段时间，拉得勤一点
 const POLL_SLOW = 20000; // 没人动时放慢，省请求和电量
@@ -62,6 +62,9 @@ export default function Home() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [joinInput, setJoinInput] = useState("");
   const [createInput, setCreateInput] = useState("");
+  const [city, setCity] = useState("北京");
+  const [startDate, setStartDate] = useState("2026-05-29");
+  const [endDate, setEndDate] = useState("2026-05-31");
 
   const room = useRef("default");
   const revRef = useRef(0); // 最近一次已知的服务器版本
@@ -72,6 +75,7 @@ export default function Home() {
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivity = useRef(Date.now()); // 最后一次本地/远端改动的时间
   const polling = useRef(false); // 防止两次轮询请求叠在一起
+  const seedRef = useRef<Plan | null>(null); // 新建时要写入新房间的初始行程
   planRef.current = plan;
 
   const flash = useCallback((msg: string) => {
@@ -131,14 +135,18 @@ export default function Home() {
         const res = await fetch(`/api/plan?room=${r}`, { cache: "no-store" });
         const data = (await res.json()) as ApiResp;
         if (data.ok && data.doc) {
+          seedRef.current = null; // 房间已有数据，丢弃待写入的初始行程
           setPlan(data.doc.plan);
           planRef.current = data.doc.plan;
           revRef.current = data.doc.rev;
           savedSeq.current = editSeq.current;
           setSync("synced");
         } else {
-          setPlan(DEFAULT_PLAN);
-          planRef.current = DEFAULT_PLAN;
+          // 房间还没数据：新建时用刚生成的行程，否则退回北京示例
+          const seed = seedRef.current ?? DEFAULT_PLAN;
+          seedRef.current = null;
+          setPlan(seed);
+          planRef.current = seed;
           await doSave();
         }
       } catch {
@@ -253,10 +261,14 @@ export default function Home() {
   }, [roomId, flash]);
 
   const daysLeft = useMemo(() => {
+    const first = plan.days[0]?.date;
+    if (!first) return null;
+    const [y, m, d] = first.split("-").map(Number);
+    const target = new Date(y, m - 1, d);
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    return Math.round((TRIP_START.getTime() - now.getTime()) / 86400000);
-  }, []);
+    return Math.round((target.getTime() - now.getTime()) / 86400000);
+  }, [plan.days]);
 
   function mutateDay(dayId: string, fn: (items: Activity[]) => Activity[]) {
     commit((p) => ({
@@ -307,9 +319,13 @@ export default function Home() {
   }
 
   function resetPlan() {
-    if (confirm("确定要恢复成默认行程吗？当前的修改会被覆盖（对方那边也会变）。")) {
+    if (
+      confirm(
+        "载入北京示例行程（陶艺/调香/拼豆/看电影那套）？当前内容会被覆盖，对方那边也会变。",
+      )
+    ) {
       commit(() => clone(DEFAULT_PLAN));
-      flash("已恢复默认行程");
+      flash("已载入北京示例行程");
     }
   }
 
@@ -343,17 +359,33 @@ export default function Home() {
   }
 
   function tryCreate() {
-    const raw = createInput.trim();
-    if (!raw) {
-      enterRoom(newRoomCode()); // 没填就随机一个
+    const c = city.trim() || "北京";
+    if (!startDate || !endDate) {
+      flash("选一下开始和结束日期");
       return;
     }
-    const r = sanitizeRoom(raw);
-    if (!r) {
+    if (startDate > endDate) {
+      flash("结束日期不能早于开始日期");
+      return;
+    }
+    const span =
+      Math.round(
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+          86400000,
+      ) + 1;
+    if (span > 30) {
+      flash("行程最长 30 天哦");
+      return;
+    }
+
+    const raw = createInput.trim();
+    const code = raw ? sanitizeRoom(raw) : newRoomCode();
+    if (!code) {
       flash("房间号只能用字母、数字、- 和 _");
       return;
     }
-    enterRoom(r);
+    seedRef.current = createPlan(c, startDate, endDate);
+    enterRoom(code);
   }
 
   // 还没挂载 / 正在拉某个房间的行程：显示骨架屏，别闪那句丑「加载中…」
@@ -368,13 +400,13 @@ export default function Home() {
           <div className="w-full max-w-md">
             <div className="text-center">
               <span className="rounded-full bg-rose-500 px-3 py-1 text-sm font-medium text-white">
-                北京 · 三天两晚
+                两个人一起做的旅行计划
               </span>
               <h1 className="mt-4 text-3xl font-bold tracking-tight text-stone-800">
-                我们的北京三日行程
+                我们的旅行行程
               </h1>
               <p className="mt-2 text-sm text-stone-500">
-                5月29日 周五 — 5月31日 周日 · 两个人一起安排，实时同步
+                选好城市和日期生成行程，两个人一起安排，实时同步
               </p>
             </div>
 
@@ -384,9 +416,44 @@ export default function Home() {
                   ✨ 新建一个行程
                 </div>
                 <div className="mt-0.5 text-sm text-stone-500">
-                  从默认的三天安排开始。可以自己起个房间号（你俩好记的，
-                  比如名字缩写），留空就随机生成。
+                  填城市和日期，自动按天数生成空白行程，你俩再一起往里加。
                 </div>
+
+                <label className="mt-3 block text-xs font-medium text-stone-500">
+                  城市
+                  <input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="去哪个城市"
+                    className="mt-1 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-stone-800"
+                  />
+                </label>
+
+                <div className="mt-3 flex gap-2">
+                  <label className="flex-1 text-xs font-medium text-stone-500">
+                    出发
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        if (endDate < e.target.value) setEndDate(e.target.value);
+                      }}
+                      className="mt-1 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-stone-800"
+                    />
+                  </label>
+                  <label className="flex-1 text-xs font-medium text-stone-500">
+                    返回
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-stone-800"
+                    />
+                  </label>
+                </div>
+
                 <div className="mt-3 flex gap-2">
                   <input
                     value={createInput}
@@ -403,7 +470,7 @@ export default function Home() {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-stone-400">
-                  只能用字母、数字、- 和 _。若这个房间号已有行程，会直接打开它。
+                  房间号只能用字母、数字、- 和 _，留空随机生成；已存在则直接打开它。
                 </p>
               </div>
 
@@ -451,9 +518,10 @@ export default function Home() {
         <header className="text-center">
           <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-sm">
             <span className="rounded-full bg-rose-500 px-3 py-1 font-medium text-white">
-              北京 · 三天两晚
+              共 {plan.days.length} 天
+              {plan.days.length > 1 ? ` ${plan.days.length - 1} 晚` : ""}
             </span>
-            {mounted && daysLeft > 0 && (
+            {mounted && daysLeft !== null && daysLeft > 0 && (
               <span className="rounded-full bg-white px-3 py-1 font-medium text-rose-600 shadow-sm">
                 还有 {daysLeft} 天出发
               </span>
@@ -543,7 +611,7 @@ export default function Home() {
             onClick={resetPlan}
             className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-stone-500 shadow-sm hover:bg-stone-50"
           >
-            ↺ 恢复默认行程
+            ↺ 载入北京示例
           </button>
         </div>
 

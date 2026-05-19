@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ActivityCard from "./components/ActivityCard";
+import LoadingScreen from "./components/LoadingScreen";
 import { DEFAULT_PLAN } from "./lib/defaultPlan";
 import { planToText } from "./lib/share";
 import type { Activity, Day, Plan } from "./lib/types";
@@ -290,7 +291,6 @@ export default function Home() {
             : `a-${Date.now()}`,
         start: "12:00",
         title: "新活动",
-        category: "free",
       },
     ]);
 
@@ -353,13 +353,15 @@ export default function Home() {
     enterRoom(r);
   }
 
+  // 还没挂载 / 正在拉某个房间的行程：显示骨架屏，别闪那句丑「加载中…」
+  if (!mounted || (roomId && sync === "loading")) {
+    return <LoadingScreen />;
+  }
+
   // 首屏：网址没带 room 时，让用户选「新建」还是「进入已有」，不自动建房间
-  if (!mounted || !roomId) {
+  if (!roomId) {
     return (
       <main className="flex min-h-full items-center justify-center bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50 px-4 py-12">
-        {!mounted ? (
-          <p className="text-sm text-stone-400">加载中…</p>
-        ) : (
           <div className="w-full max-w-md">
             <div className="text-center">
               <span className="rounded-full bg-rose-500 px-3 py-1 text-sm font-medium text-white">
@@ -431,7 +433,6 @@ export default function Home() {
               进入后网址会带上房间号，刷新、换设备只要打开同一个链接就行
             </p>
           </div>
-        )}
         {toast && (
           <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-stone-800 px-5 py-2.5 text-sm font-medium text-white shadow-lg">
             {toast}

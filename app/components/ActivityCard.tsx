@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  type Activity,
-  type Category,
-  CATEGORY_META,
-  CATEGORY_ORDER,
-} from "../lib/types";
+import type { Activity } from "../lib/types";
 
 interface Props {
   activity: Activity;
@@ -28,7 +23,6 @@ export default function ActivityCard({
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState<Activity>(activity);
-  const meta = CATEGORY_META[activity.category];
 
   function startEdit() {
     setDraft(activity);
@@ -74,21 +68,6 @@ export default function ActivityCard({
             placeholder="想做点什么…"
             className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
           />
-        </label>
-
-        <label className="mt-3 block text-xs font-medium text-stone-500">
-          类型
-          <select
-            value={draft.category}
-            onChange={(e) => set({ category: e.target.value as Category })}
-            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800"
-          >
-            {CATEGORY_ORDER.map((c) => (
-              <option key={c} value={c}>
-                {CATEGORY_META[c].emoji} {CATEGORY_META[c].label}
-              </option>
-            ))}
-          </select>
         </label>
 
         <label className="mt-3 block text-xs font-medium text-stone-500">
@@ -141,7 +120,7 @@ export default function ActivityCard({
   return (
     <div
       className={`group relative rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${
-        activity.agreed ? "border-emerald-300" : meta.ring
+        activity.agreed ? "border-emerald-300" : "border-stone-200"
       }`}
     >
       <button
@@ -201,21 +180,12 @@ export default function ActivityCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${meta.chip}`}
-            >
-              {meta.emoji} {meta.label}
+          {activity.agreed && (
+            <span className="mb-1.5 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              ✓ 都同意了
             </span>
-            {activity.agreed && (
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                ✓ 都同意了
-              </span>
-            )}
-          </div>
-          <h3 className="mt-1.5 font-semibold text-stone-800">
-            {activity.title}
-          </h3>
+          )}
+          <h3 className="font-semibold text-stone-800">{activity.title}</h3>
           {activity.location && (
             <p className="mt-0.5 text-sm text-stone-500">
               📍 {activity.location}

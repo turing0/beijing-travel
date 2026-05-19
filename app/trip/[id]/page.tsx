@@ -200,7 +200,7 @@ export default function TripPage() {
               </span>
             )}
             <span
-              className={`rounded-full px-3 py-1 font-medium ${syncColor[sync]}`}
+              className={`hidden rounded-full px-3 py-1 font-medium sm:inline-block ${syncColor[sync]}`}
             >
               {sync === "synced" ? "● " : ""}
               {syncLabel[sync]}

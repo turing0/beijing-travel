@@ -13,7 +13,6 @@ export interface Day {
   date: string; // "2026-05-29"
   label: string; // "5月29日"
   weekday: string; // "周五"
-  tag: string; // "抵达日"
   items: Activity[];
 }
 

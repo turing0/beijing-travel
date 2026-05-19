@@ -96,16 +96,13 @@ function DayColumn({
   return (
     <section className="flex flex-col">
       <div className="sticky top-0 z-10 mb-3 rounded-2xl bg-white/80 px-4 py-3 backdrop-blur">
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline">
           <h2 className="text-lg font-bold text-stone-800">
             {day.label}
             <span className="ml-2 text-sm font-normal text-stone-500">
               {day.weekday}
             </span>
           </h2>
-          <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-600">
-            {day.tag}
-          </span>
         </div>
       </div>
       <div

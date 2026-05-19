@@ -13,7 +13,6 @@ export const DEFAULT_PLAN: Plan = {
       date: "2026-05-29",
       label: "5月29日",
       weekday: "周五",
-      tag: "抵达日",
       items: [
         {
           id: id(),
@@ -75,7 +74,6 @@ export const DEFAULT_PLAN: Plan = {
       date: "2026-05-30",
       label: "5月30日",
       weekday: "周六",
-      tag: "重点日",
       items: [
         {
           id: id(),
@@ -131,7 +129,6 @@ export const DEFAULT_PLAN: Plan = {
       date: "2026-05-31",
       label: "5月31日",
       weekday: "周日",
-      tag: "离开日 · 21:25 起飞",
       items: [
         {
           id: id(),

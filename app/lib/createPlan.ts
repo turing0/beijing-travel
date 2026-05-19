@@ -30,20 +30,11 @@ export function createPlan(city: string, start: string, end: string): Plan {
       date: toYMD(cur),
       label: label(cur),
       weekday: WK[cur.getDay()],
-      tag: "",
       items: [],
     });
     cur.setDate(cur.getDate() + 1);
     i++;
   }
-  if (days.length === 1) {
-    days[0].tag = "当天";
-  } else if (days.length > 1) {
-    days[0].tag = "抵达日";
-    days[days.length - 1].tag = "离开日";
-    for (let k = 1; k < days.length - 1; k++) days[k].tag = "游玩日";
-  }
-
   const n = days.length;
   const first = days[0];
   const last = days[n - 1];

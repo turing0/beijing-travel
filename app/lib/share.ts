@@ -26,7 +26,7 @@ export function decodePlan(s: string): Plan | null {
 export function planToText(plan: Plan): string {
   const lines: string[] = [plan.title, plan.subtitle, ""];
   for (const day of plan.days) {
-    lines.push(`【${day.label} ${day.weekday} · ${day.tag}】`);
+    lines.push(`【${day.label} ${day.weekday}】`);
     for (const it of day.items) {
       const time = it.end ? `${it.start}-${it.end}` : it.start;
       const loc = it.location ? `（${it.location}）` : "";

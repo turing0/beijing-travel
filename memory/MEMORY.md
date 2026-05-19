@@ -1,1 +1,0 @@
-- [Commit directly to main](commit-directly-to-main.md) — push straight to main on this repo, no feature branches/PRs

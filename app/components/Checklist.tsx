@@ -30,11 +30,11 @@ export default function Checklist({
         )}
       </div>
 
-      <ul className="mt-4 flex flex-col gap-2.5">
+      <ul className="mt-3 flex flex-col gap-0.5">
         {items.map((item) => (
           <li
             key={item.id}
-            className="group flex items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-stone-50"
+            className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-stone-50"
           >
             <button
               onClick={() => onToggle(item.id)}
@@ -71,7 +71,7 @@ export default function Checklist({
               onClick={() => onDelete(item.id)}
               aria-label="删除这一条"
               title="删除这一条"
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-stone-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 transition hover:bg-red-50 hover:text-red-500"
             >
               <svg
                 viewBox="0 0 24 24"

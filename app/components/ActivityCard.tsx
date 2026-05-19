@@ -180,7 +180,7 @@ export default function ActivityCard({
               ? "cursor-grab touch-none select-none active:cursor-grabbing"
               : ""
           }`}
-          title={dragProps ? "按住拖动，可跨天移动" : undefined}
+          title={dragProps ? "按住拖动" : undefined}
         >
           <div className="font-mono text-sm font-bold text-stone-800">
             {activity.start}

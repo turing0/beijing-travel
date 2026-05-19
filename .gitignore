@@ -39,6 +39,9 @@ yarn-error.log*
 # claude code local settings
 .claude/settings.local.json
 
+# 本地开发时的行程数据（仅本地文件存储模式会用到）
+/.data
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

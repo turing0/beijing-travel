@@ -29,6 +29,13 @@ const syncColor: Record<SyncState, string> = {
   updated: "bg-sky-100 text-sky-700",
   offline: "bg-red-100 text-red-700",
 };
+const syncDot: Record<SyncState, string> = {
+  loading: "bg-stone-400",
+  synced: "bg-emerald-500",
+  saving: "bg-amber-500",
+  updated: "bg-sky-500",
+  offline: "bg-red-500",
+};
 
 export default function TripPage() {
   const params = useParams<{ id: string }>();
@@ -199,6 +206,15 @@ export default function TripPage() {
                 就是今天，出发！
               </span>
             )}
+            <span
+              aria-label={syncLabel[sync]}
+              title={syncLabel[sync]}
+              className={`inline-block h-2.5 w-2.5 rounded-full sm:hidden ${
+                syncDot[sync]
+              } ${
+                sync === "loading" || sync === "saving" ? "animate-pulse" : ""
+              }`}
+            />
             <span
               className={`hidden rounded-full px-3 py-1 font-medium sm:inline-block ${syncColor[sync]}`}
             >

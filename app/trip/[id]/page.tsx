@@ -137,9 +137,7 @@ export default function TripPage() {
 
   function resetPlan() {
     if (
-      confirm(
-        "载入北京示例行程（陶艺/调香/拼豆/看电影那套）？当前内容会被覆盖，对方那边也会变。",
-      )
+      confirm("载入北京示例行程（陶艺/调香/拼豆/看电影那套）？")
     ) {
       commit(() => clone(DEFAULT_PLAN) as Plan);
       flash("已载入北京示例行程");

@@ -77,8 +77,11 @@ export default function TripPage() {
     }));
   }
 
-  const updateActivity = (dayId: string, a: Activity) =>
+  const updateActivity = (dayId: string, a: Activity) => {
+    // 编辑保存后清掉“新建自动展开”标记，之后重挂载不再弹编辑态
+    if (a.id === justAddedActivity) setJustAddedActivity(null);
     mutateDay(dayId, (items) => items.map((it) => (it.id === a.id ? a : it)));
+  };
 
   const deleteActivity = (dayId: string, aid: string) =>
     mutateDay(dayId, (items) => items.filter((it) => it.id !== aid));
@@ -105,13 +108,16 @@ export default function TripPage() {
     setJustAddedActivity(id);
   };
 
-  const reorderDays = (newDays: Day[]) =>
+  const reorderDays = (newDays: Day[]) => {
+    // 拖拽（含跨天）会让卡片重挂载，清掉标记避免编辑表单意外复活
+    setJustAddedActivity(null);
     commit((p) => ({ ...p, days: newDays }));
+  };
 
   // 把某一天的活动按开始时间重排（sort 是稳定的，同一时间保持原有先后）
   const sortDay = (dayId: string) => {
     mutateDay(dayId, (items) =>
-      items.sort((a, b) => a.start.localeCompare(b.start)),
+      items.sort((a, b) => (a.start || "").localeCompare(b.start || "")),
     );
     flash("已按开始时间排好 ⏱");
   };

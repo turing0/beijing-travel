@@ -238,7 +238,12 @@ export default function Planner({
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={() => {
+        setActiveId(null);
+        // 取消拖拽（如按 Esc）：回退到真实数据。渲染期比对只响应 days 变化，
+        // 不回退的话本地排列会一直悬空，后续按下标移动会错乱
+        setLocalDays(days);
+      }}
     >
       <div className="mt-10 grid gap-8 lg:grid-cols-3 lg:gap-6">
         {localDays.map((day) => (

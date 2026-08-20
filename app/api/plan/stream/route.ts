@@ -40,18 +40,37 @@ export async function GET(req: Request) {
           close();
         }
       };
+      // 合并突发：读的过程中又来了通知就排队，读完再补一轮，
+      // 避免连续保存时对存储的并发重复读
+      let pushing = false;
+      let queued = false;
       const pushLatest = async () => {
-        try {
-          const doc = await readDoc(room);
-          if (doc && doc.rev > lastRev) {
-            lastRev = doc.rev;
-            send("doc", JSON.stringify(doc));
-          }
-        } catch {
-          /* 这一轮读失败就算了，下次通知再试 */
+        if (pushing) {
+          queued = true;
+          return;
         }
+        pushing = true;
+        do {
+          queued = false;
+          try {
+            const doc = await readDoc(room);
+            if (doc && doc.rev > lastRev) {
+              lastRev = doc.rev;
+              send("doc", JSON.stringify(doc));
+            }
+          } catch {
+            /* 这一轮读失败就算了，下次通知再试 */
+          }
+        } while (queued && !closed);
+        pushing = false;
       };
 
+      // 先发一行注释当首包：让浏览器立刻触发 onopen，也避免个别代理攒着空响应
+      try {
+        controller.enqueue(encoder.encode(": ok\n\n"));
+      } catch {
+        /* 已断开 */
+      }
       const ping = setInterval(() => send("ping", String(Date.now())), PING_INTERVAL);
       const lifetime = setTimeout(close, STREAM_LIFETIME);
       abort.signal.addEventListener("abort", () => {

@@ -38,7 +38,7 @@ export function planToText(plan: Plan): string {
       const time = it.end ? `${it.start}-${it.end}` : it.start;
       const loc = it.location ? `（${it.location}）` : "";
       const ok = it.agreed ? " ✓已确认" : "";
-      lines.push(`  ${time}  ${it.title}${loc}${ok}`);
+      lines.push(`  ${time}  ${it.title || "未命名"}${loc}${ok}`);
       if (it.notes) lines.push(`        · ${it.notes}`);
     }
     lines.push("");

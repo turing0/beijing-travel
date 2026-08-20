@@ -23,9 +23,13 @@ function safeRoom(room: string): string {
 }
 
 /* ---------- Upstash 实现 ---------- */
+let redisClient: import("@upstash/redis").Redis | null = null;
 async function upstash() {
-  const { Redis } = await import("@upstash/redis");
-  return Redis.fromEnv();
+  if (!redisClient) {
+    const { Redis } = await import("@upstash/redis");
+    redisClient = Redis.fromEnv();
+  }
+  return redisClient;
 }
 
 async function upstashRead(room: string): Promise<StoredDoc | null> {
@@ -122,6 +126,8 @@ async function fileSubscribe(
     }
   }, 1500);
   signal.addEventListener("abort", () => clearInterval(timer));
+  // 上面 await 期间就被中止的话，监听器不会再触发，这里补一次
+  if (signal.aborted) clearInterval(timer);
 }
 
 /* ---------- 本地文件实现（仅本地开发用） ---------- */

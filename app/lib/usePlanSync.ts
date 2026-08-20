@@ -173,6 +173,27 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
       lastEventAt = Date.now();
     };
 
+    // 断线期间的本地改动：先看服务器有没有更新的版本再决定。
+    // 对方「已保存」的版本比我们「未保存」的改动新 → 以对方为准，
+    // 避免自动补存悄悄覆盖对方的成果；服务器没动过才把本地改动存上去。
+    const reconcile = async () => {
+      try {
+        const res = await fetch(
+          `/api/plan?room=${encodeURIComponent(room.current)}`,
+          { cache: "no-store" },
+        );
+        const data = (await res.json()) as ApiResp;
+        if (data.ok && data.doc && data.doc.rev > revRef.current) {
+          savedSeq.current = editSeq.current; // 放弃未保存的本地改动
+          tryApply(data.doc);
+        } else {
+          scheduleSave();
+        }
+      } catch {
+        /* 连接还不稳，等下次重连或下次编辑再存 */
+      }
+    };
+
     const tryApply = (doc: { plan: Plan; rev: number } | null) => {
       if (retryTimer) {
         clearTimeout(retryTimer);
@@ -228,10 +249,11 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
       });
       es.addEventListener("ping", alive);
       es.onopen = () => {
-        alive();
+        // 只喂看门狗；失败计数要等收到真实事件（doc/ping）才清零——
+        // 否则「连上就被关」的循环会让退避永远不生长，变成 2 秒一次的重连风暴
+        lastEventAt = Date.now();
         setSync((s) => (s === "offline" ? "synced" : s));
-        // 断线期间的本地改动，重连后补一次保存
-        if (editSeq.current !== savedSeq.current) scheduleSave();
+        if (editSeq.current !== savedSeq.current) void reconcile();
       };
       es.onerror = () => {
         disconnect();

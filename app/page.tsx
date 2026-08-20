@@ -49,10 +49,19 @@ function defaultDates(): [string, string] {
   return [ymd(s), ymd(e)];
 }
 const EMPTY_DATES: [string, string] = ["", ""];
+// 缓存保证快照引用稳定（useSyncExternalStore 要求）；跨天后重算，
+// 长开的标签页不会一直拿到过期的默认日期
 let cachedDefaultDates: [string, string] | null = null;
+let cachedOnDay = "";
 const subscribeNever = () => () => {};
-const getDefaultDates = () =>
-  (cachedDefaultDates ??= defaultDates());
+const getDefaultDates = () => {
+  const today = new Date().toDateString();
+  if (!cachedDefaultDates || cachedOnDay !== today) {
+    cachedOnDay = today;
+    cachedDefaultDates = defaultDates();
+  }
+  return cachedDefaultDates;
+};
 const getServerDates = () => EMPTY_DATES;
 
 // 兼容旧的 /?room=xxx 链接：显示占位并跳到 /trip/xxx。

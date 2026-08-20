@@ -11,6 +11,7 @@ export interface StoredDoc {
   updatedAt: string;
 }
 
+// 历史遗留的存储 key 前缀：改名会让 Redis 里已有房间的数据读不到，保持原值
 const KEY_PREFIX = "beijing-plan:";
 const hasUpstash =
   !!process.env.UPSTASH_REDIS_REST_URL &&

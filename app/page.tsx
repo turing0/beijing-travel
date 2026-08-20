@@ -35,14 +35,31 @@ function sanitizeRoom(s: string): string {
     .slice(0, 40);
 }
 
+// 默认日期：两周后出发，玩 3 天（只是个起点，用户随手改）
+function defaultDates(): [string, string] {
+  const p = (n: number) => String(n).padStart(2, "0");
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const s = new Date();
+  s.setDate(s.getDate() + 14);
+  const e = new Date(s);
+  e.setDate(e.getDate() + 2);
+  return [ymd(s), ymd(e)];
+}
+
 export default function Home() {
   const router = useRouter();
   const [toast, setToast] = useState("");
   const [joinInput, setJoinInput] = useState("");
   const [createInput, setCreateInput] = useState("");
-  const [city, setCity] = useState("北京");
-  const [startDate, setStartDate] = useState("2026-05-29");
-  const [endDate, setEndDate] = useState("2026-05-31");
+  const [city, setCity] = useState("");
+  const [[startDate, endDate], setDates] = useState<[string, string]>([
+    "",
+    "",
+  ]);
+  const setStartDate = (v: string) =>
+    setDates(([, e]) => [v, e < v ? v : e]);
+  const setEndDate = (v: string) => setDates(([s]) => [s, v]);
   const [redirecting, setRedirecting] = useState(false);
   const [joining, setJoining] = useState(false);
 
@@ -60,8 +77,17 @@ export default function Home() {
     }
   }, [router]);
 
+  // 默认日期在客户端填，避免服务端时区不同导致首屏不一致
+  useEffect(() => {
+    setDates(defaultDates());
+  }, []);
+
   function tryCreate() {
-    const c = city.trim() || "北京";
+    const c = city.trim();
+    if (!c) {
+      flash("先填一下要去的城市");
+      return;
+    }
     if (!startDate || !endDate) {
       flash("选一下开始和结束日期");
       return;
@@ -133,13 +159,13 @@ export default function Home() {
       <div className="w-full max-w-md">
         <div className="text-center">
           <span className="rounded-full bg-rose-500 px-3 py-1 text-sm font-medium text-white">
-            两个人一起做的旅行计划
+            一起规划下一场旅行
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-stone-800">
-            我们的旅行行程
+            我们的旅行计划
           </h1>
           <p className="mt-2 text-sm text-stone-500">
-            选好城市和日期生成行程，两个人一起安排，实时同步
+            选好城市和日期生成行程，把链接发给同伴，一起编辑、实时同步
           </p>
         </div>
 
@@ -149,7 +175,7 @@ export default function Home() {
               ✨ 新建一个行程
             </div>
             <div className="mt-0.5 text-sm text-stone-500">
-              填城市和日期，自动按天数生成空白行程，你俩再一起往里加。
+              填城市和日期，自动按天数生成空白行程，再一起往里加活动。
             </div>
 
             <label className="mt-3 block text-xs font-medium text-stone-500">
@@ -157,7 +183,7 @@ export default function Home() {
               <input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="去哪个城市"
+                placeholder="去哪儿？比如 成都、大理、东京"
                 className="mt-1 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-stone-800"
               />
             </label>
@@ -168,10 +194,7 @@ export default function Home() {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    if (endDate < e.target.value) setEndDate(e.target.value);
-                  }}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-stone-800"
                 />
               </label>

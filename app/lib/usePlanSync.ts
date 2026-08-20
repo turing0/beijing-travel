@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_PLAN } from "./defaultPlan";
 import type { Plan } from "./types";
 
-const CACHE_KEY = "beijing-plan-cache-v1";
+// 每个房间各存一份本地缓存，断网时兜底显示，不会串到别的房间
+const cacheKey = (id: string) => `trip-plan-cache:${id}`;
 const SAVE_DEBOUNCE = 700;
 const POLL_FAST = 5000; // 刚有人改动后的一段时间，拉得勤一点
 const POLL_SLOW = 20000; // 没人动时放慢，省请求和电量
@@ -78,7 +79,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
       setPlan((p) => {
         const next = updater(p);
         try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+          localStorage.setItem(cacheKey(room.current), JSON.stringify(next));
         } catch {
           /* 忽略 */
         }
@@ -89,7 +90,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
     [scheduleSave],
   );
 
-  // 拉取这个房间的行程；房间还没数据就用新建时暂存的行程，没有则退回北京示例
+  // 拉取这个房间的行程；房间还没数据就用新建时暂存的行程，没有则提示不存在
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -135,7 +136,7 @@ export function usePlanSync(roomId: string, flash: (m: string) => void) {
       } catch {
         if (cancelled) return;
         try {
-          const c = localStorage.getItem(CACHE_KEY);
+          const c = localStorage.getItem(cacheKey(roomId));
           if (c) setPlan(normalizePlan(JSON.parse(c) as Plan));
         } catch {
           /* 忽略损坏的缓存 */

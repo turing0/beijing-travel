@@ -28,7 +28,7 @@ export default function LoadingScreen({
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
         <header className="flex flex-col items-center text-center">
           <span className="rounded-full bg-rose-500 px-3 py-1 text-sm font-medium text-white">
-            北京 · 三天两晚
+            我们的旅行计划
           </span>
           <Skeleton className="mt-4 h-9 w-72 max-w-full" />
           <Skeleton className="mt-3 h-4 w-56 max-w-full" />

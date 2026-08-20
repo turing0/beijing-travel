@@ -143,11 +143,9 @@ export default function TripPage() {
   }
 
   function resetPlan() {
-    if (
-      confirm("载入北京示例行程（陶艺/调香/拼豆/看电影那套）？")
-    ) {
+    if (confirm("载入三日示例行程？可以在它的基础上随意修改。")) {
       commit(() => clone(DEFAULT_PLAN) as Plan);
-      flash("已载入北京示例行程");
+      flash("已载入示例行程");
     }
   }
 
@@ -274,7 +272,7 @@ export default function TripPage() {
             onClick={() =>
               copy(
                 window.location.href,
-                "链接已复制，发给她——你们改的就是同一份～",
+                "链接已复制，发给同伴——你们改的就是同一份～",
               )
             }
             className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-600"
@@ -292,7 +290,7 @@ export default function TripPage() {
               onClick={resetPlan}
               className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-stone-500 shadow-sm hover:bg-stone-50"
             >
-              ↺ 载入北京示例
+              ↺ 载入示例行程
             </button>
           )}
         </div>

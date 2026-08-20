@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "北京三日 · 我们的行程",
-  description: "5月29日—31日，一起在北京安排的三天行程，可以随时一起编辑。",
+  title: "我们的旅行计划 · 一起规划旅行",
+  description:
+    "选好城市和日期生成行程，把链接发给同伴，一起编辑、实时同步的旅行计划工具。",
 };
 
 // iOS Safari 顶部状态栏/地址栏与页面渐变背景同色，移动端观感更连贯

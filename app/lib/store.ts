@@ -38,6 +38,92 @@ async function upstashWrite(room: string, doc: StoredDoc): Promise<void> {
   await redis.set(KEY_PREFIX + room, doc);
 }
 
+// 房间的变更通知频道（pub/sub 的频道和普通 key 不冲突）
+const channel = (room: string) => `${KEY_PREFIX}notify:${room}`;
+
+// 通过 Upstash 的 REST SSE 接口订阅频道；收到消息就调 onChange。
+// 返回时订阅已生效（等到了 "subscribe" 确认行），中途断开会调 onEnd。
+async function upstashSubscribe(
+  room: string,
+  signal: AbortSignal,
+  onChange: () => void,
+  onEnd: () => void,
+): Promise<void> {
+  const res = await fetch(
+    `${process.env.UPSTASH_REDIS_REST_URL}/subscribe/${encodeURIComponent(
+      channel(room),
+    )}`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+        Accept: "text/event-stream",
+      },
+      cache: "no-store",
+      signal,
+    },
+  );
+  if (!res.ok || !res.body) {
+    throw new Error(`subscribe failed: ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  // 逐行读 SSE：data: subscribe,<频道>,<数量> / data: message,<频道>,<内容>
+  const readLine = async (): Promise<string | null> => {
+    for (;;) {
+      const idx = buf.indexOf("\n");
+      if (idx >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (line) return line;
+        continue;
+      }
+      const { value, done } = await reader.read();
+      if (done) return null;
+      buf += decoder.decode(value, { stream: true });
+    }
+  };
+
+  // 等订阅确认，避免「先读文档、订阅还没生效」的空档漏掉更新
+  for (;;) {
+    const line = await readLine();
+    if (line === null) throw new Error("subscribe stream closed early");
+    if (line.startsWith("data: subscribe,")) break;
+  }
+
+  // 后台继续收消息
+  void (async () => {
+    try {
+      for (;;) {
+        const line = await readLine();
+        if (line === null) break;
+        if (line.startsWith("data: message,")) onChange();
+      }
+    } catch {
+      /* signal 中止或连接断开 */
+    }
+    onEnd();
+  })();
+}
+
+// 文件模式没有 pub/sub：低频轮询本地文件的 rev（本地开发，开销可忽略）
+async function fileSubscribe(
+  room: string,
+  signal: AbortSignal,
+  onChange: () => void,
+): Promise<void> {
+  let last = (await fileRead(room))?.rev ?? 0;
+  const timer = setInterval(async () => {
+    const doc = await fileRead(room);
+    if (doc && doc.rev > last) {
+      last = doc.rev;
+      onChange();
+    }
+  }, 1500);
+  signal.addEventListener("abort", () => clearInterval(timer));
+}
+
 /* ---------- 本地文件实现（仅本地开发用） ---------- */
 const DATA_DIR = path.join(process.cwd(), ".data");
 
@@ -75,9 +161,33 @@ export async function writeDoc(room: string, plan: Plan): Promise<StoredDoc> {
     rev: Date.now(),
     updatedAt: new Date().toISOString(),
   };
-  if (hasUpstash) await upstashWrite(r, doc);
-  else await fileWrite(r, doc);
+  if (hasUpstash) {
+    await upstashWrite(r, doc);
+    // 喊一声「这个房间变了」，让所有订阅的 SSE 连接去拉最新文档；
+    // 通知失败不影响保存本身（客户端还有重连兜底）。
+    try {
+      const redis = await upstash();
+      await redis.publish(channel(r), String(doc.rev));
+    } catch {
+      /* 忽略 */
+    }
+  } else {
+    await fileWrite(r, doc);
+  }
   return doc;
+}
+
+// 订阅某房间的变更通知；返回时订阅已生效，通过 signal 取消。
+// 收到通知只表示「变了」，具体内容由调用方自己 readDoc。
+export async function subscribeChanges(
+  room: string,
+  signal: AbortSignal,
+  onChange: () => void,
+  onEnd: () => void,
+): Promise<void> {
+  const r = safeRoom(room);
+  if (hasUpstash) await upstashSubscribe(r, signal, onChange, onEnd);
+  else await fileSubscribe(r, signal, onChange);
 }
 
 export const storageMode = hasUpstash ? "upstash" : "file";

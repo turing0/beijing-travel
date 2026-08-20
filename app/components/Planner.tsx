@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   closestCorners,
   DndContext,
@@ -33,6 +33,7 @@ interface Props {
   onActivityDelete: (dayId: string, id: string) => void;
   onActivityAdd: (dayId: string) => void;
   onActivityMove: (dayId: string, idx: number, dir: -1 | 1) => void;
+  onDaySort: (dayId: string) => void;
   autoEditId?: string | null; // 刚新建的活动 id，对应卡片直接展开编辑
 }
 
@@ -91,22 +92,33 @@ function SortableActivity({
 
 function DayColumn({
   day,
+  onSort,
   children,
 }: {
   day: Day;
+  onSort: () => void;
   children: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
   return (
     <section className="flex flex-col">
       <div className="sticky top-0 z-10 mb-3 rounded-2xl bg-white/80 px-4 py-3 backdrop-blur">
-        <div className="flex items-baseline">
+        <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-lg font-bold text-stone-800">
             {day.label}
             <span className="ml-2 text-sm font-normal text-stone-500">
               {day.weekday}
             </span>
           </h2>
+          {day.items.length > 1 && (
+            <button
+              onClick={onSort}
+              title="把这一天的活动按开始时间重新排列"
+              className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-stone-400 transition hover:bg-stone-100 hover:text-rose-500"
+            >
+              ⇅ 按时间排序
+            </button>
+          )}
         </div>
       </div>
       <div
@@ -128,15 +140,20 @@ export default function Planner({
   onActivityDelete,
   onActivityAdd,
   onActivityMove,
+  onDaySort,
   autoEditId,
 }: Props) {
   const [localDays, setLocalDays] = useState<Day[]>(days);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // 没在拖的时候，跟随外部（包括对方同步过来的）数据
-  useEffect(() => {
+  // 外部数据（包括对方同步过来的）变化时跟随；正在拖拽就先保持本地版本，
+  // 拖完提交后父级数据更新，这里会再次收敛。渲染期比对是 React 推荐的
+  // “根据 props 调整 state”写法，不经过 effect。
+  const [prevDays, setPrevDays] = useState<Day[]>(days);
+  if (days !== prevDays) {
+    setPrevDays(days);
     if (!activeId) setLocalDays(days);
-  }, [days, activeId]);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -225,7 +242,11 @@ export default function Planner({
     >
       <div className="mt-10 grid gap-8 lg:grid-cols-3 lg:gap-6">
         {localDays.map((day) => (
-          <DayColumn key={day.id} day={day}>
+          <DayColumn
+            key={day.id}
+            day={day}
+            onSort={() => onDaySort(day.id)}
+          >
             <SortableContext
               items={day.items.map((it) => it.id)}
               strategy={verticalListSortingStrategy}

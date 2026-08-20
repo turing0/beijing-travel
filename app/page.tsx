@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createPlan } from "./lib/createPlan";
 import { seedKey } from "./lib/usePlanSync";
 
@@ -35,7 +35,9 @@ function sanitizeRoom(s: string): string {
     .slice(0, 40);
 }
 
-// 默认日期：两周后出发，玩 3 天（只是个起点，用户随手改）
+// 默认日期：两周后出发，玩 3 天（只是个起点，用户随手改）。
+// “今天”只有客户端才知道：静态预渲染阶段给空值，水合后再显示默认日期，
+// 用 useSyncExternalStore 读，避免服务端/客户端首屏不一致。
 function defaultDates(): [string, string] {
   const p = (n: number) => String(n).padStart(2, "0");
   const ymd = (d: Date) =>
@@ -46,21 +48,47 @@ function defaultDates(): [string, string] {
   e.setDate(e.getDate() + 2);
   return [ymd(s), ymd(e)];
 }
+const EMPTY_DATES: [string, string] = ["", ""];
+let cachedDefaultDates: [string, string] | null = null;
+const subscribeNever = () => () => {};
+const getDefaultDates = () =>
+  (cachedDefaultDates ??= defaultDates());
+const getServerDates = () => EMPTY_DATES;
 
-export default function Home() {
+// 兼容旧的 /?room=xxx 链接：显示占位并跳到 /trip/xxx。
+// useSearchParams 隔离在这个小组件里，首页主体才能正常静态预渲染。
+function LegacyRoomRedirect() {
+  const router = useRouter();
+  const room = useSearchParams().get("room");
+  useEffect(() => {
+    if (room) router.replace(`/trip/${encodeURIComponent(room)}`);
+  }, [room, router]);
+  if (!room) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50 px-4">
+      <p className="text-sm text-stone-400">正在打开行程…</p>
+    </div>
+  );
+}
+
+function Home() {
   const router = useRouter();
   const [toast, setToast] = useState("");
   const [joinInput, setJoinInput] = useState("");
   const [createInput, setCreateInput] = useState("");
   const [city, setCity] = useState("");
-  const [[startDate, endDate], setDates] = useState<[string, string]>([
-    "",
-    "",
-  ]);
+  const defaultsDates = useSyncExternalStore(
+    subscribeNever,
+    getDefaultDates,
+    getServerDates,
+  );
+  const [pickedDates, setPickedDates] = useState<[string, string] | null>(
+    null,
+  );
+  const [startDate, endDate] = pickedDates ?? defaultsDates;
   const setStartDate = (v: string) =>
-    setDates(([, e]) => [v, e < v ? v : e]);
-  const setEndDate = (v: string) => setDates(([s]) => [s, v]);
-  const [redirecting, setRedirecting] = useState(false);
+    setPickedDates([v, endDate < v ? v : endDate]);
+  const setEndDate = (v: string) => setPickedDates([startDate, v]);
   const [joining, setJoining] = useState(false);
 
   const span =
@@ -76,19 +104,6 @@ export default function Home() {
     window.setTimeout(() => setToast(""), 2200);
   }
 
-  // 兼容旧的 /?room=xxx 链接：直接转到 /trip/xxx
-  useEffect(() => {
-    const r = new URL(window.location.href).searchParams.get("room");
-    if (r) {
-      setRedirecting(true);
-      router.replace(`/trip/${encodeURIComponent(r)}`);
-    }
-  }, [router]);
-
-  // 默认日期在客户端填，避免服务端时区不同导致首屏不一致
-  useEffect(() => {
-    setDates(defaultDates());
-  }, []);
 
   function tryCreate() {
     const c = city.trim();
@@ -149,13 +164,6 @@ export default function Home() {
     }
   }
 
-  if (redirecting) {
-    return (
-      <main className="flex min-h-full items-center justify-center bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50 px-4">
-        <p className="text-sm text-stone-400">正在打开行程…</p>
-      </main>
-    );
-  }
 
   return (
     <main className="flex min-h-full items-center justify-center bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50 px-4 py-12">
@@ -277,5 +285,18 @@ export default function Home() {
         </div>
       )}
     </main>
+  );
+}
+
+// useSearchParams 在静态预渲染页面里必须套 Suspense，否则构建报错；
+// 只包住重定向小组件，首页主体保持在静态 HTML 里
+export default function HomePage() {
+  return (
+    <>
+      <Home />
+      <Suspense fallback={null}>
+        <LegacyRoomRedirect />
+      </Suspense>
+    </>
   );
 }

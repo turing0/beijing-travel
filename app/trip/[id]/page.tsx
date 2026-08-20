@@ -108,6 +108,14 @@ export default function TripPage() {
   const reorderDays = (newDays: Day[]) =>
     commit((p) => ({ ...p, days: newDays }));
 
+  // 把某一天的活动按开始时间重排（sort 是稳定的，同一时间保持原有先后）
+  const sortDay = (dayId: string) => {
+    mutateDay(dayId, (items) =>
+      items.sort((a, b) => a.start.localeCompare(b.start)),
+    );
+    flash("已按开始时间排好 ⏱");
+  };
+
   const addChecklistItem = () => {
     const id = newId();
     commit((p) => ({
@@ -325,6 +333,7 @@ export default function TripPage() {
           onActivityDelete={deleteActivity}
           onActivityAdd={addActivity}
           onActivityMove={moveActivity}
+          onDaySort={sortDay}
           autoEditId={justAddedActivity}
         />
 

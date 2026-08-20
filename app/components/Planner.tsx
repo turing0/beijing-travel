@@ -33,6 +33,7 @@ interface Props {
   onActivityDelete: (dayId: string, id: string) => void;
   onActivityAdd: (dayId: string) => void;
   onActivityMove: (dayId: string, idx: number, dir: -1 | 1) => void;
+  autoEditId?: string | null; // 刚新建的活动 id，对应卡片直接展开编辑
 }
 
 function SortableActivity({
@@ -43,6 +44,7 @@ function SortableActivity({
   onChange,
   onDelete,
   onMove,
+  autoEdit,
 }: {
   activity: Activity;
   dayId: string;
@@ -51,6 +53,7 @@ function SortableActivity({
   onChange: (a: Activity) => void;
   onDelete: () => void;
   onMove: (dir: -1 | 1) => void;
+  autoEdit?: boolean;
 }) {
   const {
     attributes,
@@ -80,6 +83,7 @@ function SortableActivity({
         onMove={onMove}
         dragRef={setActivatorNodeRef}
         dragProps={{ ...attributes, ...listeners }}
+        autoEdit={autoEdit}
       />
     </div>
   );
@@ -124,6 +128,7 @@ export default function Planner({
   onActivityDelete,
   onActivityAdd,
   onActivityMove,
+  autoEditId,
 }: Props) {
   const [localDays, setLocalDays] = useState<Day[]>(days);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -235,6 +240,7 @@ export default function Planner({
                   onChange={(a) => onActivityChange(day.id, a)}
                   onDelete={() => onActivityDelete(day.id, it.id)}
                   onMove={(dir) => onActivityMove(day.id, idx, dir)}
+                  autoEdit={it.id === autoEditId}
                 />
               ))}
             </SortableContext>

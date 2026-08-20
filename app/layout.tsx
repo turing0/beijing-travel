@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "我们的旅行计划 · 一起规划旅行",
   description:
     "选好城市和日期生成行程，把链接发给同伴，一起编辑、实时同步的旅行计划工具。",
+  openGraph: {
+    title: "我们的旅行计划",
+    description: "选好城市和日期生成行程，和同伴一起编辑、实时同步。",
+    siteName: "我们的旅行计划",
+  },
 };
 
 // iOS Safari 顶部状态栏/地址栏与页面渐变背景同色，移动端观感更连贯

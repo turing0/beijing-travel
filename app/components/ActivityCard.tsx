@@ -12,6 +12,7 @@ interface Props {
   onMove: (dir: -1 | 1) => void;
   dragRef?: (el: HTMLElement | null) => void;
   dragProps?: Record<string, unknown>;
+  autoEdit?: boolean; // 刚新建的卡片直接展开编辑，省一次点击
 }
 
 export default function ActivityCard({
@@ -23,8 +24,9 @@ export default function ActivityCard({
   onMove,
   dragRef,
   dragProps,
+  autoEdit,
 }: Props) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(!!autoEdit);
   const [confirming, setConfirming] = useState(false);
   const [draft, setDraft] = useState<Activity>(activity);
 
@@ -150,7 +152,7 @@ export default function ActivityCard({
           <p className="text-sm text-stone-700">
             删除
             <span className="font-semibold text-stone-900">
-              「{activity.title}」
+              「{activity.title || "未命名"}」
             </span>
             ？
           </p>
@@ -196,7 +198,9 @@ export default function ActivityCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-stone-800">{activity.title}</h3>
+          <h3 className="font-semibold text-stone-800">
+            {activity.title || "未命名"}
+          </h3>
           {activity.location && (
             <p className="mt-0.5 text-sm text-stone-500">
               📍 {activity.location}
@@ -217,7 +221,7 @@ export default function ActivityCard({
                   : "text-stone-500 hover:bg-stone-100"
               }`}
             >
-              {activity.agreed ? "✓ 已确认" : "标记两人都同意"}
+              {activity.agreed ? "✓ 已确认" : "标记为已确认"}
             </button>
             <button
               onClick={startEdit}

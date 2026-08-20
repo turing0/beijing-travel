@@ -43,6 +43,13 @@ export default function TripPage() {
 
   const [toast, setToast] = useState("");
   const [editingHeader, setEditingHeader] = useState(false);
+  // 刚新建的活动 / 备忘条目 id：让对应卡片直接展开编辑、输入框自动聚焦
+  const [justAddedActivity, setJustAddedActivity] = useState<string | null>(
+    null,
+  );
+  const [justAddedChecklist, setJustAddedChecklist] = useState<string | null>(
+    null,
+  );
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -84,32 +91,31 @@ export default function TripPage() {
       return items;
     });
 
-  const addActivity = (dayId: string) =>
+  const newId = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `a-${Date.now()}`;
+
+  const addActivity = (dayId: string) => {
+    const id = newId();
     mutateDay(dayId, (items) => [
       ...items,
-      {
-        id:
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `a-${Date.now()}`,
-        start: "12:00",
-        title: "新活动",
-      },
+      { id, start: "12:00", title: "" },
     ]);
+    setJustAddedActivity(id);
+  };
 
   const reorderDays = (newDays: Day[]) =>
     commit((p) => ({ ...p, days: newDays }));
 
-  const newId = () =>
-    typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `c-${Date.now()}`;
-
-  const addChecklistItem = () =>
+  const addChecklistItem = () => {
+    const id = newId();
     commit((p) => ({
       ...p,
-      checklist: [...p.checklist, { id: newId(), text: "", done: false }],
+      checklist: [...p.checklist, { id, text: "", done: false }],
     }));
+    setJustAddedChecklist(id);
+  };
 
   const toggleChecklistItem = (cid: string) =>
     commit((p) => ({
@@ -188,6 +194,14 @@ export default function TripPage() {
   return (
     <main className="min-h-full bg-gradient-to-b from-rose-50 via-amber-50 to-stone-50">
       <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6 sm:py-12">
+        <div className="-mt-4 mb-2 sm:-mt-6">
+          <Link
+            href="/"
+            className="text-sm text-stone-400 transition hover:text-rose-500"
+          >
+            ← 首页
+          </Link>
+        </div>
         <header className="text-center">
           <div className="mb-5 flex flex-wrap items-center justify-center gap-2 text-sm">
             <span className="rounded-full bg-rose-500 px-3 py-1 font-medium text-white">
@@ -301,6 +315,7 @@ export default function TripPage() {
           onToggle={toggleChecklistItem}
           onChangeText={changeChecklistText}
           onDelete={deleteChecklistItem}
+          focusId={justAddedChecklist}
         />
 
         <Planner
@@ -310,6 +325,7 @@ export default function TripPage() {
           onActivityDelete={deleteActivity}
           onActivityAdd={addActivity}
           onActivityMove={moveActivity}
+          autoEditId={justAddedActivity}
         />
 
         <p className="mt-6 text-center text-xs leading-relaxed text-stone-400">

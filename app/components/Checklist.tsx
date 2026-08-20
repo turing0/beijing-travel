@@ -8,6 +8,7 @@ interface Props {
   onToggle: (id: string) => void;
   onChangeText: (id: string, text: string) => void;
   onDelete: (id: string) => void;
+  focusId?: string | null; // 刚新建的条目 id，挂载时自动聚焦它的输入框
 }
 
 export default function Checklist({
@@ -16,6 +17,7 @@ export default function Checklist({
   onToggle,
   onChangeText,
   onDelete,
+  focusId,
 }: Props) {
   const doneCount = items.filter((i) => i.done).length;
 
@@ -61,6 +63,7 @@ export default function Checklist({
             <input
               value={item.text}
               onChange={(e) => onChangeText(item.id, e.target.value)}
+              autoFocus={item.id === focusId}
               placeholder="要带什么 / 别忘了…"
               className={`min-w-0 flex-1 bg-transparent text-sm text-stone-700 outline-none placeholder:text-stone-300 ${
                 item.done ? "text-stone-400 line-through" : ""

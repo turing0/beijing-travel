@@ -63,6 +63,14 @@ export default function Home() {
   const [redirecting, setRedirecting] = useState(false);
   const [joining, setJoining] = useState(false);
 
+  const span =
+    startDate && endDate && startDate <= endDate
+      ? Math.round(
+          (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+            86400000,
+        ) + 1
+      : null;
+
   function flash(msg: string) {
     setToast(msg);
     window.setTimeout(() => setToast(""), 2200);
@@ -96,12 +104,7 @@ export default function Home() {
       flash("结束日期不能早于开始日期");
       return;
     }
-    const span =
-      Math.round(
-        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-          86400000,
-      ) + 1;
-    if (span > 30) {
+    if (span !== null && span > 30) {
       flash("行程最长 30 天哦");
       return;
     }
@@ -209,6 +212,13 @@ export default function Home() {
                 />
               </label>
             </div>
+
+            {span !== null && (
+              <p className="mt-2 text-xs text-stone-500">
+                共 {span} 天{span > 1 ? ` ${span - 1} 晚` : ""}
+                {span > 30 ? " · 最长支持 30 天" : ""}
+              </p>
+            )}
 
             <div className="mt-3 flex gap-2">
               <input
